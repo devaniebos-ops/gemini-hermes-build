@@ -1,6 +1,6 @@
 name: Build Gemini Deps for Termux
 on: 
-  workflow_dispatch: # Tombol manual di tab Actions
+  workflow_dispatch:
 
 jobs:
   build-wheels:
@@ -14,34 +14,36 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: 3. Install Build Tools (Rust & Maturin)
+      - name: 3. Install Build Tools
         run: |
-          # Install maturin untuk compile pydantic-core
           pip install maturin
-          # Tambahkan target arsitektur Hermes (Android aarch64)
           rustup target add aarch64-linux-android
 
       - name: 4. Build Wheels (The Heavy Stuff)
         run: |
           mkdir -p dist
           
-          # Download source pydantic-core terbaru
+          # Download source pydantic-core
           pip download pydantic-core --no-binary :all:
           
-          # Ekstrak file source-nya
+          # Ekstrak file source
           tar -xvf pydantic_core-*.tar.gz
           
           # Masuk ke direktori hasil ekstrak
           cd pydantic_core-*/
           
-          # PROSES MASAK: Compile ke Android aarch64
-          # -i python3: Kasih tahu maturin lokasi python (Fix error interpreter)
-          # --release: Biar filenya kecil dan kencang
-          maturin build --release --target aarch64-linux-android --out ../dist -i python3
+          # SETTINGAN PENTING:
+          # Kita paksa Maturin pakai Python host untuk proses build binding
+          export PYO3_PYTHON=$(which python3)
+          
+          # PROSES MASAK:
+          # --compatibility off: Biar dia nggak ngecek apakah whl bisa jalan di Ubuntu (jelas nggak bisa karena ini buat Android)
+          # --strip: Biar ukuran file whl-nya kecil (penting buat RAM Hermes)
+          maturin build --release --target aarch64-linux-android --out ../dist --compatibility off --strip
           
           cd ..
           
-          # Tambahan: Download grpcio-status (binary whl)
+          # Ambil grpcio-status whl yang sudah jadi
           pip download grpcio-status --dest dist
 
       - name: 5. Upload Artifact
