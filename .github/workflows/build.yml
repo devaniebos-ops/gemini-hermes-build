@@ -1,5 +1,8 @@
 name: Build Gemini Deps for Termux
 on: 
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -9,33 +12,29 @@ jobs:
       - name: 1. Checkout Code
         uses: actions/checkout@v4
 
-      - name: 2. Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: 3. Install Build Tools
+      - name: 2. Install Build Tools
         run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-dev python3-pip
+          pip install --upgrade pip
           pip install maturin
           rustup target add aarch64-linux-android
 
-      - name: 4. Build Wheels (The Heavy Stuff)
+      - name: 3. Build Wheels (The Heavy Stuff)
         run: |
           mkdir -p dist
           pip download pydantic-core --no-binary :all:
           tar -xvf pydantic_core-*.tar.gz
           cd pydantic_core-*/
           
-          # Trik Linker: Biar maturin nemu 'python3.13'
-          sudo ln -sf $(which python3) /usr/bin/python3.13
-          
-          # Build dengan flag yang sudah kita sempurnakan
-          maturin build --release --target aarch64-linux-android --out ../dist --compatibility off --strip -i python3.13
+          # Paksa Maturin pake python3 bawaan sistem
+          # Kita pakai flag --interpreter python3
+          maturin build --release --target aarch64-linux-android --out ../dist --compatibility off --strip --interpreter python3
           
           cd ..
           pip download grpcio-status --dest dist
 
-      - name: 5. Upload Artifact
+      - name: 4. Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gemini-hermes-wheels
