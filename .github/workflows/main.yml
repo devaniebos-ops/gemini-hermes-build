@@ -1,51 +1,50 @@
 name: Build Gemini Deps for Termux
 on: 
-  workflow_dispatch: # Biar bisa dijalankan manual dari tab Actions
+  workflow_dispatch: # Tombol manual di tab Actions
 
 jobs:
   build-wheels:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: 1. Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 2. Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
-      - name: Install Build Tools (Rust & Maturin)
+      - name: 3. Install Build Tools (Rust & Maturin)
         run: |
-          # Install Maturin untuk build pydantic-core
+          # Install maturin untuk compile pydantic-core
           pip install maturin
-          # Tambahkan target arsitektur Android aarch64 (Hermes)
+          # Tambahkan target arsitektur Hermes (Android aarch64)
           rustup target add aarch64-linux-android
 
-      - name: Build Wheels (The Heavy Stuff)
+      - name: 4. Build Wheels (The Heavy Stuff)
         run: |
-          mkdir dist
+          mkdir -p dist
           
-          # 1. Download source pydantic-core
+          # Download source pydantic-core terbaru
           pip download pydantic-core --no-binary :all:
           
-          # 2. Ekstrak file .tar.gz yang barusan di-download
+          # Ekstrak file source-nya
           tar -xvf pydantic_core-*.tar.gz
           
-          # 3. Masuk ke direktori hasil ekstrak
-          # Kita pakai wildcard agar tidak error kalau versinya berubah
+          # Masuk ke direktori hasil ekstrak
           cd pydantic_core-*/
           
-          # 4. Masak (Compile) menggunakan Maturin untuk target Android
-          # Ini akan menghasilkan file .whl di folder ../dist
-          maturin build --release --target aarch64-linux-android --out ../dist
+          # PROSES MASAK: Compile ke Android aarch64
+          # -i python3: Kasih tahu maturin lokasi python (Fix error interpreter)
+          # --release: Biar filenya kecil dan kencang
+          maturin build --release --target aarch64-linux-android --out ../dist -i python3
           
           cd ..
           
-          # 5. Ambil dependensi tambahan yang sering bermasalah di Termux
-          # Kita ambil whl yang sudah jadi (bukan compile) untuk grpcio-status
+          # Tambahan: Download grpcio-status (binary whl)
           pip download grpcio-status --dest dist
 
-      - name: Upload Artifact
+      - name: 5. Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gemini-hermes-wheels
