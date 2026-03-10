@@ -1,35 +1,52 @@
 name: Build Gemini Deps for Termux
-on: workflow_dispatch
+on: 
+  workflow_dispatch: # Biar bisa dijalankan manual dari tab Actions
 
 jobs:
-  build:
+  build-wheels:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
-      - name: Install Build Tools
+      - name: Install Build Tools (Rust & Maturin)
         run: |
+          # Install Maturin untuk build pydantic-core
           pip install maturin
+          # Tambahkan target arsitektur Android aarch64 (Hermes)
           rustup target add aarch64-linux-android
 
-      - name: Build Wheels
+      - name: Build Wheels (The Heavy Stuff)
         run: |
           mkdir dist
-          # Download & Build Pydantic Core (Biang kerok RAM)
+          
+          # 1. Download source pydantic-core
           pip download pydantic-core --no-binary :all:
-          cd pydantic_core-*
+          
+          # 2. Ekstrak file .tar.gz yang barusan di-download
+          tar -xvf pydantic_core-*.tar.gz
+          
+          # 3. Masuk ke direktori hasil ekstrak
+          # Kita pakai wildcard agar tidak error kalau versinya berubah
+          cd pydantic_core-*/
+          
+          # 4. Masak (Compile) menggunakan Maturin untuk target Android
+          # Ini akan menghasilkan file .whl di folder ../dist
           maturin build --release --target aarch64-linux-android --out ../dist
+          
           cd ..
           
-          # Download dependency lainnya yang sering minta compile
+          # 5. Ambil dependensi tambahan yang sering bermasalah di Termux
+          # Kita ambil whl yang sudah jadi (bukan compile) untuk grpcio-status
           pip download grpcio-status --dest dist
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gemini-wheels
+          name: gemini-hermes-wheels
           path: dist/*.whl
