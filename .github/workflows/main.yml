@@ -32,14 +32,14 @@ jobs:
           # Masuk ke direktori hasil ekstrak
           cd pydantic_core-*/
           
-          # SETTINGAN PENTING:
-          # Kita paksa Maturin pakai Python host untuk proses build binding
-          export PYO3_PYTHON=$(which python3)
+          # KUNCI PERBAIKAN:
+          # Kita definisikan path python secara absolut
+          PYTHON_PATH=$(which python3)
+          export PYO3_PYTHON="$PYTHON_PATH"
+          export MATURIN_PY_INTERPRETER="$PYTHON_PATH"
           
-          # PROSES MASAK:
-          # --compatibility off: Biar dia nggak ngecek apakah whl bisa jalan di Ubuntu (jelas nggak bisa karena ini buat Android)
-          # --strip: Biar ukuran file whl-nya kecil (penting buat RAM Hermes)
-          maturin build --release --target aarch64-linux-android --out ../dist --compatibility off --strip
+          # Jalankan maturin via module python agar path-nya sinkron
+          python3 -m maturin build --release --target aarch64-linux-android --out ../dist --compatibility off --strip -i "$PYTHON_PATH"
           
           cd ..
           
