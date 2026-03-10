@@ -1,0 +1,35 @@
+name: Build Gemini Deps for Termux
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Build Tools
+        run: |
+          pip install maturin
+          rustup target add aarch64-linux-android
+
+      - name: Build Wheels
+        run: |
+          mkdir dist
+          # Download & Build Pydantic Core (Biang kerok RAM)
+          pip download pydantic-core --no-binary :all:
+          cd pydantic_core-*
+          maturin build --release --target aarch64-linux-android --out ../dist
+          cd ..
+          
+          # Download dependency lainnya yang sering minta compile
+          pip download grpcio-status --dest dist
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-wheels
+          path: dist/*.whl
